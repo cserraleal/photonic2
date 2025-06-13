@@ -1,13 +1,23 @@
 import streamlit as st
-st.set_page_config(page_title="Solar Calculator", layout="wide")
-
 import json
-from streamlit import rerun  # ✅ NEW for recent Streamlit
-from logic.energy import EnergyCalculator
-from logic.financial import FinancialCalculator
+from logic.energy.consumption_calculator import ConsumptionCalculator
+from logic.energy.system_calculator import SystemCalculator
+from logic.financial.metrics_calculator import FinancialMetricsCalculator
+from logic.generation.data_generator import DataGenerator
+from logic.utils.data_loader import get_monthly_irradiance, get_price_per_kwh
+from logic.utils.billing_calculator import BillingCalculator
+
+st.set_page_config(page_title="Photonic", layout="wide")
 
 # ----------------------------
-# Load JSON data (cached)
+# Sidebar Navigation
+# ----------------------------
+
+st.sidebar.title("📋 Menu")
+section = st.sidebar.radio("Navigate", ["🏠 Home", "🔆 Photonic"])
+
+# ----------------------------
+# Load JSONs
 # ----------------------------
 
 @st.cache_data
@@ -17,114 +27,136 @@ def load_json(path):
 
 pricing_data = load_json("data/pricing.json")
 irradiance_data = load_json("data/irradiance.json")
+irradiance_monthly = load_json("data/irradiance_monthly.json")
 
 # ----------------------------
-# Initialize Step State
+# Page: Home
 # ----------------------------
 
-if "step" not in st.session_state:
-    st.session_state.step = 1
+if section == "🏠 Home":
+    st.title("Bienvenido a Siempre Energy")
+    st.markdown("Selecciona una opción del menú para comenzar.")
 
 # ----------------------------
-# Step 1: Electricity Data
+# Page: Solar Calculator
 # ----------------------------
 
-if st.session_state.step == 1:
-    st.title("Solar Energy Calculator")
-    st.header("Step 1: Electricity Bill and Tariff Info")
+elif section == "🔆 Photonic":
+    if "step" not in st.session_state:
+        st.session_state.step = 1
 
-    with st.form("step1_form"):
-        col1, col2, col3, col4 = st.columns(4)
-        with col1: mes1 = st.number_input("Month 1 (Q)", min_value=0.0, step=10.0)
-        with col2: mes2 = st.number_input("Month 2 (Q)", min_value=0.0, step=10.0)
-        with col3: mes3 = st.number_input("Month 3 (Q)", min_value=0.0, step=10.0)
-        with col4: mes4 = st.number_input("Month 4 (Q)", min_value=0.0, step=10.0)
+    if st.session_state.step == 1:
+        st.title("Photonic")
+        st.header("Step 1: Electricity Consumption and Tariff Info")
 
-        distributor = st.selectbox("Electricity Distributor", list(pricing_data.keys()))
-        tariff = st.selectbox("Tariff Type", list(pricing_data[distributor].keys()))
+        with st.form("step1_form"):
+            col1, col2, col3, col4 = st.columns(4)
+            with col1: kwh1 = st.number_input("Month 1 (kWh)", min_value=0.0, step=1.0)
+            with col2: kwh2 = st.number_input("Month 2 (kWh)", min_value=0.0, step=1.0)
+            with col3: kwh3 = st.number_input("Month 3 (kWh)", min_value=0.0, step=1.0)
+            with col4: kwh4 = st.number_input("Month 4 (kWh)", min_value=0.0, step=1.0)
 
-        if st.form_submit_button("Next"):
-            st.session_state.bills = [mes1, mes2, mes3, mes4]
-            st.session_state.distributor = distributor
-            st.session_state.tariff = tariff
-            st.session_state.step = 2
-            rerun()
+            distributor = st.selectbox("Electricity Distributor", list(pricing_data.keys()))
+            tariff = st.selectbox("Tariff Type", list(pricing_data[distributor].keys()))
 
-# ----------------------------
-# Step 2: Location & Preference
-# ----------------------------
+            if st.form_submit_button("Next"):
+                st.session_state.kwh = [kwh1, kwh2, kwh3, kwh4]
+                st.session_state.distributor = distributor
+                st.session_state.tariff = tariff
+                st.session_state.step = 2
+                st.rerun()
 
-elif st.session_state.step == 2:
-    st.title("Solar Energy Calculator")
-    st.header("Step 2: Location and System Sizing Preference")
+    elif st.session_state.step == 2:
+        st.title("Photonic")
+        st.header("Step 2: Location and System Sizing Preference")
 
-    with st.form("step2_form"):
-        department = st.selectbox("Department", list(irradiance_data.keys()))
-        sizing_pref = st.selectbox("Sizing Preference", ["Minimum", "Balanced", "Maximum"])
+        with st.form("step2_form"):
+            department = st.selectbox("Department", list(irradiance_monthly.keys()))
+            sizing_pref = st.selectbox("Sizing Preference", ["Minimum", "Balanced", "Maximum"])
 
-        col1, col2 = st.columns([1, 3])
-        with col1:
-            if st.form_submit_button("Back"):
-                st.session_state.step = 1
-                rerun()
-        with col2:
-            if st.form_submit_button("Calculate"):
-                st.session_state.department = department
-                st.session_state.sizing_pref = sizing_pref
-                st.session_state.step = 3
-                rerun()
+            col1, col2 = st.columns([1, 3])
+            with col1:
+                if st.form_submit_button("Back"):
+                    st.session_state.step = 1
+                    st.rerun()
+            with col2:
+                if st.form_submit_button("Calculate"):
+                    st.session_state.department = department
+                    st.session_state.sizing_pref = sizing_pref
+                    st.session_state.step = 3
+                    st.rerun()
 
-# ----------------------------
-# Step 3: Display Results
-# ----------------------------
+    elif st.session_state.step == 3:
+        st.title("Photonic")
+        st.success("Calculation Complete")
 
-elif st.session_state.step == 3:
-    st.title("Solar Energy Calculator")
-    st.success("Calculation Complete")
+        kwh_list = st.session_state.kwh
+        distributor = st.session_state.distributor
+        rate_type = st.session_state.tariff
+        dept = st.session_state.department
+        pref = st.session_state.sizing_pref
 
-    # Get stored values
-    bills = st.session_state.bills
-    distributor = st.session_state.distributor
-    tariff = st.session_state.tariff
-    dept = st.session_state.department
-    pref = st.session_state.sizing_pref
+        # === Energy Calculations ===
+        avg_kwh = ConsumptionCalculator.calculate_average_monthly_consumption(kwh_list)
+        annual_kwh = ConsumptionCalculator.calculate_annual_consumption(avg_kwh)
+        monthly_kwh_sim = DataGenerator.simulate_monthly_distribution(annual_kwh)
+        monthly_irradiance = irradiance_monthly[dept]
+        annual_irradiance = sum(monthly_irradiance) / 12
 
-    # Energy and Financial Calculations
-    avg_kwh, annual_kwh = EnergyCalculator.calculate_consumption(bills, distributor, tariff, pricing_data)
-    energy_results = EnergyCalculator.estimate_system(annual_kwh, irradiance_data, dept, pref)
+        system_kw = SystemCalculator.calculate_required_system_size_kw(avg_kwh, annual_irradiance)
 
-    financial_results = FinancialCalculator.calculate_metrics(
-        energy_results["system_kw"],
-        energy_results["annual_gen_kwh"],
-        avg_kwh,
-        pricing_data,
-        distributor,
-        tariff
-    )
+        if pref.lower() == "minimum":
+            system_kw *= 0.8
+        elif pref.lower() == "maximum":
+            system_kw *= 1.2
 
-    # Display in Tabs
-    tab1, tab2 = st.tabs(["📋 Numeric Results", "📈 Graphs"])
+        panels = SystemCalculator.calculate_number_of_panels(system_kw)
+        installed_kw = SystemCalculator.calculate_installed_power_kw(panels)
+        area = SystemCalculator.calculate_required_area_m2(panels)
+        annual_gen = SystemCalculator.calculate_annual_generation_kwh(panels, annual_irradiance)
+        coverage = SystemCalculator.calculate_coverage_percentage(annual_gen, avg_kwh, pref)
+        monthly_generation = DataGenerator.simulate_monthly_generation_from_irradiance(panels, monthly_irradiance)
 
-    with tab1:
-        st.subheader("Energy Results")
-        st.write(f"• Avg Monthly Consumption (kWh): **{avg_kwh}**")
-        st.write(f"• Annual Consumption (kWh): **{annual_kwh}**")
-        st.write(f"• System Size (kW): **{energy_results['system_kw']}**")
-        st.write(f"• Number of Panels: **{energy_results['panels']}**")
-        st.write(f"• Required Area (m²): **{energy_results['area_m2']}**")
-        st.write(f"• Annual Solar Generation (kWh): **{energy_results['annual_gen_kwh']}**")
-        st.write(f"• Solar Coverage (%): **{energy_results['coverage_pct']}%**")
+        # === Financial Calculations ===
+        financial = BillingCalculator.generate_annual_cost_comparison(
+            monthly_kwh_sim,
+            monthly_generation,
+            distributor,
+            rate_type,
+            dept
+        )
 
-        st.divider()
-        st.subheader("Financial & Environmental Results")
-        st.write(f"• Investment Cost (Q): **Q{financial_results['investment_q']}**")
-        st.write(f"• Annual Savings (Q): **Q{financial_results['annual_savings_q']}**")
-        st.write(f"• Payback Period (years): **{financial_results['payback_years']}**")
-        st.write(f"• ROI (%): **{financial_results['roi_pct']}%**")
-        st.write(f"• IRR (%): **{financial_results['irr_pct']}**")
-        st.write(f"• CO₂ Saved (kg/year): **{financial_results['co2_saved_kg']}**")
-        st.write(f"• Tree Equivalents: **{financial_results['tree_eq']}**")
+        investment = FinancialMetricsCalculator.calculate_investment_cost(installed_kw)
+        payback = FinancialMetricsCalculator.calculate_payback_period(investment, financial["annual_savings"])
+        roi = FinancialMetricsCalculator.calculate_roi(investment, financial["annual_savings"])
+        irr = FinancialMetricsCalculator.calculate_irr(
+            FinancialMetricsCalculator.calculate_cashflow_list(investment, financial["annual_savings"])
+        )
+        co2 = FinancialMetricsCalculator.calculate_co2_saved(annual_gen)
+        trees = FinancialMetricsCalculator.calculate_tree_equivalents(co2)
 
-    with tab2:
-        st.subheader("Graphs")
-        st.info("Visualizations will be added here in the next step.")
+        # === Display Results ===
+        tab1, tab2 = st.tabs(["📋 Numeric Results", "📈 Graphs"])
+
+        with tab1:
+            st.subheader("Energy Results")
+            st.write(f"• Avg Monthly Consumption (kWh): **{avg_kwh}**")
+            st.write(f"• Annual Consumption (kWh): **{annual_kwh}**")
+            st.write(f"• System Size (kW): **{round(system_kw, 2)}**")
+            st.write(f"• Number of Panels: **{panels}**")
+            st.write(f"• Required Area (m²): **{area}**")
+            st.write(f"• Annual Generation (kWh): **{annual_gen}**")
+            st.write(f"• Coverage (%): **{coverage}%**")
+
+            st.divider()
+            st.subheader("Financial & Environmental Results")
+            st.write(f"• Investment Cost (Q): **Q{investment}**")
+            st.write(f"• Annual Savings (Q): **Q{financial['annual_savings']}**")
+            st.write(f"• Payback Period (years): **{payback}**")
+            st.write(f"• ROI (%): **{roi}**")
+            st.write(f"• IRR (%): **{irr}**")
+            st.write(f"• CO₂ Saved (kg/year): **{co2}**")
+            st.write(f"• Tree Equivalents: **{trees}**")
+
+        with tab2:
+            st.info("Graphs will be added in the next step.")

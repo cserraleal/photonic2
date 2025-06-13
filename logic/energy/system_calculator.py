@@ -13,7 +13,7 @@ class SystemCalculator:
         """
         Calculates required system size in kW.
         """
-        return round((avg_monthly_kwh * 12) / (annual_irradiance * 365 * SYSTEM_EFFICIENCY), 2)
+        return (avg_monthly_kwh * 12) / (annual_irradiance * 365 * SYSTEM_EFFICIENCY)
 
     @staticmethod
     def calculate_number_of_panels(system_size_kw):
@@ -27,7 +27,7 @@ class SystemCalculator:
         """
         Calculates total installed power in kW.
         """
-        return round(number_of_panels * PANEL_POWER_KW, 2)
+        return number_of_panels * PANEL_POWER_KW
 
     @staticmethod
     def calculate_required_area_m2(number_of_panels):

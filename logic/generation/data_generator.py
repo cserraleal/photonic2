@@ -1,7 +1,11 @@
 # logic/generation/data_generator.py
 
 import random
-from config.constants import *
+from config.constants import (
+    PANEL_POWER_KW,
+    SYSTEM_EFFICIENCY,
+    SYSTEM_LIFETIME_YEARS
+)
 
 class DataGenerator:
     """
@@ -9,19 +13,19 @@ class DataGenerator:
     """
 
     @staticmethod
-    def simulate_monthly_data_from_annual(total_annual_value, variation=0.05):
+    def simulate_monthly_distribution(total_annual_value, variation=0.05):
         """
-        Returns 12 values that sum to total_annual_value with small random variations.
+        Generates 12 monthly values that sum up to total_annual_value with random variation.
         """
         base = total_annual_value / 12
-        monthly = []
+        monthly_values = []
 
         for _ in range(12):
-            factor = 1 + random.uniform(-variation, variation)
-            monthly.append(base * factor)
+            rand_factor = 1 + random.uniform(-variation, variation)
+            monthly_values.append(base * rand_factor)
 
-        scale = total_annual_value / sum(monthly)
-        normalized = [round(val * scale, 2) for val in monthly]
+        scale = total_annual_value / sum(monthly_values)
+        normalized = [round(val * scale, 2) for val in monthly_values]
         return normalized
 
     @staticmethod
@@ -38,7 +42,7 @@ class DataGenerator:
         return values
 
     @staticmethod
-    def simulate_monthly_generation_from_irradiance(number_of_panels, monthly_irradiance_list):
+    def simulate_monthly_generation_from_irradiance(number_of_panels, monthly_irradiance_list, panel_power=PANEL_POWER_KW, efficiency=SYSTEM_EFFICIENCY):
         """
         Uses panel count and monthly irradiance to estimate monthly generation.
         """
@@ -46,7 +50,7 @@ class DataGenerator:
         generation = []
 
         for i, irradiance in enumerate(monthly_irradiance_list):
-            kwh = number_of_panels * PANEL_POWER_KW * irradiance * SYSTEM_EFFICIENCY * days_per_month[i]
+            kwh = number_of_panels * panel_power * irradiance * efficiency * days_per_month[i]
             generation.append(round(kwh, 2))
 
         return generation

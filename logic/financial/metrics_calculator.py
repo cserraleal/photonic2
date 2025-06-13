@@ -80,3 +80,17 @@ class FinancialMetricsCalculator:
             rate = new_rate
 
         return None
+    
+    @staticmethod
+    def generate_cumulative_cashflow_list(investment_cost, annual_savings, years=SYSTEM_LIFETIME_YEARS):
+        """
+        Returns a list of cumulative cash flow values per year.
+        Starts with the negative investment, then adds savings yearly.
+        """
+        cumulative = []
+        value = -investment_cost
+        for year in range(years + 1):
+            if year > 0:
+                value += annual_savings
+            cumulative.append(round(value, 2))
+        return cumulative
