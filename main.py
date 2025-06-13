@@ -81,7 +81,7 @@ print(f"Annual Generation (kWh): {annual_generation}")
 print(f"Coverage (%): {coverage}")
 
 print("\n==== ENVIRONMENTAL IMPACT ====")
-print(f"CO₂ Saved (kg/year): {co2_saved}")
+print(f"CO2 Saved (kg/year): {co2_saved}")
 print(f"Tree Equivalents: {trees}")
 
 print("\n==== FINANCIAL ====")
