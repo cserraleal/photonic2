@@ -54,3 +54,15 @@ class DataGenerator:
             generation.append(round(kwh, 2))
 
         return generation
+
+    @staticmethod
+    def simulate_annual_generation_with_degradation(base_value, years=30, degradation_rate=0.004):
+        """
+        Simulates annual generation with linear degradation (default 0.5% per year).
+        """
+        values = []
+        for year in range(years):
+            factor = (1 - degradation_rate) ** year
+            value = round(base_value * factor, 2)
+            values.append(value)
+        return values
