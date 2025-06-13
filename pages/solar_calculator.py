@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 import streamlit as st
-from utils.pdf_report import PDFReport
+from logic.utils.pdf_report import PDFReport
 import tempfile
 from geopy.geocoders import Nominatim
 import json
@@ -201,8 +201,55 @@ def render():
             st.write(f"• Payback Period (years): **{payback}**")
             st.write(f"• ROI (%): **{roi}**")
             st.write(f"• IRR (%): **{irr}**")
-            st.write(f"• CO₂ Saved (kg/year): **{co2}**")
+            st.write(f"• CO2 Saved (kg/year): **{co2}**")
             st.write(f"• Tree Equivalents: **{trees}**")
+            # --- Download PDF Report ---
+            if st.button("📄 Download PDF Report"):
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+                    pdf = PDFReport()
+                    pdf.add_page()
+
+                    # Add user info
+                    pdf.add_user_info(st.session_state.personal_info)
+
+                    # Structure results into labeled dictionaries
+                    energy_output = {
+                        "Average Monthly Consumption (kWh)": avg_kwh,
+                        "Annual Consumption (kWh)": annual_kwh,
+                        "System Size (kW)": round(system_kw, 2),
+                        "Number of Panels": panels,
+                        "Required Area (m²)": area,
+                        "Annual Generation (kWh)": annual_gen,
+                        "Coverage (%)": coverage
+                    }
+
+                    financial_output = {
+                        "Investment Cost (Q)": investment,
+                        "Annual Savings (Q)": financial["annual_savings"],
+                        "Payback Period (years)": payback,
+                        "ROI (%)": roi,
+                        "IRR (%)": irr,
+                        "CO2 Saved (kg/year)": co2,
+                        "Tree Equivalents": trees,
+                        "Annual Cost Without Solar (Q)": financial["annual_cost_without_solar"],
+                        "Annual Cost With Solar (Q)": financial["annual_cost_with_solar"]
+                    }
+
+                    # Add results to PDF
+                    pdf.add_results(energy_output, financial_output)
+            
+                    # Save PDF
+                    pdf.save_pdf(tmp_file.name)
+            
+                    # Show download button
+                    with open(tmp_file.name, "rb") as file:
+                        st.download_button(
+                            label="📥 Click to Download PDF",
+                            data=file,
+                            file_name="solar_report.pdf",
+                            mime="application/pdf"
+                        )
+
 
         with tab2:
         

@@ -39,14 +39,14 @@ class FinancialMetricsCalculator:
     @staticmethod
     def calculate_co2_saved(annual_generation_kwh):
         """
-        Calculates annual CO₂ savings in kg.
+        Calculates annual CO2 savings in kg.
         """
         return round(annual_generation_kwh * CO2_SAVED_PER_KWH, 2)
 
     @staticmethod
     def calculate_tree_equivalents(co2_saved_kg):
         """
-        Calculates tree equivalents from CO₂ savings.
+        Calculates tree equivalents from CO2 savings.
         """
         return round((co2_saved_kg * TREE_FACTOR) / 10, 2)
 

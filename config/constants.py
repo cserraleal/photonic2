@@ -11,10 +11,10 @@ SYSTEM_EFFICIENCY = 0.78
 # Area occupied by one panel in square meters
 PANEL_AREA_M2 = 2.7
 
-# CO₂ saved per kWh in kilograms
+# CO2 saved per kWh in kilograms
 CO2_SAVED_PER_KWH = 0.5
 
-# Trees offset per 10 kg of CO₂ saved
+# Trees offset per 10 kg of CO2 saved
 TREE_FACTOR = 0.8
 
 # Value-added tax rate (IVA)
