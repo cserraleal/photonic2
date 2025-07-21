@@ -110,7 +110,7 @@ def render():
     elif st.session_state.step == 4:
         st.title("Solar Energy Calculator")
         st.header("Step 4: System Location")
-        st.text("Enter address by name or by coordinates. If the pin is not set exactly after entering the address you can click on the position desired.")
+        st.text("Enter address by name or by coordinates. If the pin is not set exactly after entering the address you can click on the position desired")
 
         DEFAULT_LAT = 14.6349
         DEFAULT_LON = -90.5069
