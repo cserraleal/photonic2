@@ -27,7 +27,7 @@ def logout_button():
     if st.sidebar.button("Cerrar sesión"):
         st.session_state.logged_in = False
         st.session_state.username = ""
-        st.experimental_rerun()
+        st.rerun()
 
 # Step 5: Initialize session state
 if "logged_in" not in st.session_state:
@@ -38,7 +38,7 @@ if "logged_in" not in st.session_state:
 # Step 6: Redirect after login (safe rerun)
 if st.session_state.get("just_logged_in", False):
     st.session_state.just_logged_in = False
-    st.experimental_rerun()
+    st.rerun()
 
 # Step 7: Protected area or login
 if st.session_state.logged_in:
