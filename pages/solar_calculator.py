@@ -39,6 +39,7 @@ def render():
     if st.session_state.step == 1:
         st.title("Solar Energy Calculator")
         st.header("Step 1: Electricity Consumption and Tariff Info")
+        st.text("Please select EGGSA and BT for correct results. Other optionas are still WIP.")
 
         with st.form("step1_form"):
             col1, col2, col3, col4 = st.columns(4)
@@ -109,6 +110,7 @@ def render():
     elif st.session_state.step == 4:
         st.title("Solar Energy Calculator")
         st.header("Step 4: System Location")
+        st.text("Enter address by name or by coordinates. If the pin is not set exactly after entering the address you can click on the position desired.")
 
         DEFAULT_LAT = 14.6349
         DEFAULT_LON = -90.5069
@@ -149,6 +151,8 @@ def render():
                             st.warning("Address not found.")
                     except (GeocoderTimedOut, GeocoderUnavailable) as e:
                         st.error(f"Geocoding error: {e}")
+        
+        st.text("If entered address by name and it didnt work try beeing as close as the example address.")
 
         # Show map
         lat = st.session_state.pin_lat
