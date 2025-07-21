@@ -119,12 +119,12 @@ def render():
 
         # Address and manual input section (separate form for search)
         with st.form("search_form"):
-            address = st.text_input("Enter Address (optional)", value=st.session_state.get("location_info", {}).get("address", ""))
+            address = st.text_input("Enter Address e.g. (19 Calle 16-29, Zona 7, Mixco, Guatemala)", value=st.session_state.get("location_info", {}).get("address", ""))
             col1, col2 = st.columns(2)
             with col1:
-                manual_lat = st.text_input("Latitude (optional)")
+                manual_lat = st.text_input("Latitude (optional instead of address)")
             with col2:
-                manual_lon = st.text_input("Longitude (optional)")
+                manual_lon = st.text_input("Longitude (optional instead of address)")
 
             search_clicked = st.form_submit_button("Search Location")
 
@@ -292,10 +292,12 @@ def render():
             st.write(f"• CO2 Saved (kg/year): **{co2}**")
             st.write(f"• Tree Equivalents: **{trees}**")
             # --- Download PDF Report ---
-            if st.button("📄 Download PDF Report"):
+            if st.button("📄 PDF Report"):
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
                     pdf = PDFReport()
+                    pdf.add_cover_page()
                     pdf.add_page()
+                    
 
                     # Add user info
                     pdf.add_user_info(st.session_state.personal_info)
