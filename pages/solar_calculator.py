@@ -1,13 +1,19 @@
 # pages/solar_calculator.py
+
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 import streamlit as st
-from logic.utils.pdf_report import PDFReport
 import tempfile
-from geopy.geocoders import Nominatim
 import json
+
+from streamlit_folium import st_folium
+import folium
+from geopy.geocoders import Nominatim
+from geopy.exc import GeocoderTimedOut, GeocoderUnavailable
+
+from logic.utils.pdf_report import PDFReport
 from logic.energy.consumption_calculator import ConsumptionCalculator
 from logic.energy.system_calculator import SystemCalculator
 from logic.financial.metrics_calculator import FinancialMetricsCalculator
@@ -24,14 +30,6 @@ def load_json(path):
 pricing_data = load_json("data/pricing.json")
 irradiance_monthly = load_json("data/irradiance_monthly.json")
 
-
-
-def geocode_address(address):
-    geolocator = Nominatim(user_agent="solar-calculator")
-    location = geolocator.geocode(address)
-    if location:
-        return location.latitude, location.longitude
-    return None, None
 
 def render():
     if "step" not in st.session_state:
@@ -83,41 +81,131 @@ def render():
         st.header("Step 3: Personal Information")
 
         with st.form("step3_form"):
-          st.subheader("Contact and Location Information")
+            col1, col2 = st.columns(2)
+            with col1:
+                first_name = st.text_input("First Name", max_chars=50)
+                last_name = st.text_input("Last Name", max_chars=50)
+            with col2:
+                email = st.text_input("Email")
+                phone = st.text_input("Phone")
 
-          col1, col2 = st.columns(2)
-          with col1:
-              first_name = st.text_input("First Name", max_chars=50)
-              email = st.text_input("Email")
-              phone = st.text_input("Phone")
-
-          with col2:
-              last_name = st.text_input("Last Name", max_chars=50)
-              address = st.text_input("Address")
-              latitude = st.number_input("Latitude", format="%.6f")
-              longitude = st.number_input("Longitude", format="%.6f")
-
-          col3, col4 = st.columns([1, 3])
-          with col3:
-              if st.form_submit_button("Back"):
-                  st.session_state.step = 2
-                  st.rerun()
-          with col4:
-              if st.form_submit_button("Continue"):
-                  st.session_state.personal_info = {
-                      "first_name": first_name,
-                      "last_name": last_name,
-                      "email": email,
-                      "phone": phone,
-                      "address": address,
-                      "latitude": latitude,
-                      "longitude": longitude,
-                  }
-                  st.session_state.step = 4
-                  st.rerun()
-
+            col3, col4 = st.columns([1, 3])
+            with col3:
+                if st.form_submit_button("Back"):
+                    st.session_state.step = 2
+                    st.rerun()
+            with col4:
+                if st.form_submit_button("Next"):
+                    st.session_state.personal_info = {
+                        "first_name": first_name,
+                        "last_name": last_name,
+                        "email": email,
+                        "phone": phone,
+                    }
+                    st.session_state.step = 4
+                    st.rerun()
 
     elif st.session_state.step == 4:
+        st.title("Solar Energy Calculator")
+        st.header("Step 4: System Location")
+
+        DEFAULT_LAT = 14.6349
+        DEFAULT_LON = -90.5069
+
+        if "pin_lat" not in st.session_state:
+            st.session_state.pin_lat = DEFAULT_LAT
+        if "pin_lon" not in st.session_state:
+            st.session_state.pin_lon = DEFAULT_LON
+
+        # Address and manual input section (separate form for search)
+        with st.form("search_form"):
+            address = st.text_input("Enter Address (optional)", value=st.session_state.get("location_info", {}).get("address", ""))
+            col1, col2 = st.columns(2)
+            with col1:
+                manual_lat = st.text_input("Latitude (optional)")
+            with col2:
+                manual_lon = st.text_input("Longitude (optional)")
+
+            search_clicked = st.form_submit_button("Search Location")
+
+            if search_clicked:
+                if manual_lat and manual_lon:
+                    try:
+                        st.session_state.pin_lat = float(manual_lat)
+                        st.session_state.pin_lon = float(manual_lon)
+                        st.success("📍 Coordinates set from manual input.")
+                    except ValueError:
+                        st.warning("Invalid latitude or longitude values.")
+                elif address:
+                    geolocator = Nominatim(user_agent="solar-calculator")
+                    try:
+                        location = geolocator.geocode(address, timeout=10)
+                        if location:
+                            st.session_state.pin_lat = location.latitude
+                            st.session_state.pin_lon = location.longitude
+                            st.success("📍 Coordinates set from address.")
+                        else:
+                            st.warning("Address not found.")
+                    except (GeocoderTimedOut, GeocoderUnavailable) as e:
+                        st.error(f"Geocoding error: {e}")
+
+        # Show map
+        lat = st.session_state.pin_lat
+        lon = st.session_state.pin_lon
+
+        m = folium.Map(
+            location=[lat, lon],
+            zoom_start=15,
+            tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+            attr="Esri Satellite"
+        )
+        folium.Marker([lat, lon], popup="Selected Location").add_to(m)
+        m.add_child(folium.LatLngPopup())
+        map_data = st_folium(m, width=700, height=500)
+
+        if map_data and map_data.get("last_clicked"):
+            clicked = map_data["last_clicked"]
+            st.session_state.pin_lat = clicked["lat"]
+            st.session_state.pin_lon = clicked["lng"]
+            st.success(f"📍 Pin updated via map click: ({clicked['lat']}, {clicked['lng']})")
+
+        st.markdown(f"**Current Coordinates:** `{st.session_state.pin_lat}`, `{st.session_state.pin_lon}`")
+
+        # Navigation form
+        with st.form("nav_buttons_form"):
+            col3, col4 = st.columns([1, 3])
+            with col3:
+                back = st.form_submit_button("Back")
+            with col4:
+                continue_btn = st.form_submit_button("Continue")
+
+            if back:
+                st.session_state.step = 3
+                st.rerun()
+            if continue_btn:
+                # Update location_info for map tab
+                st.session_state.location_info = {
+                    "address": address,
+                    "latitude": st.session_state.pin_lat,
+                    "longitude": st.session_state.pin_lon,
+                }
+
+                # Add location to personal_info summary as well
+                if "personal_info" not in st.session_state:
+                    st.session_state.personal_info = {}
+
+                st.session_state.personal_info.update({
+                    "address": address,
+                    "latitude": st.session_state.pin_lat,
+                    "longitude": st.session_state.pin_lon,
+                })
+                st.session_state.step = 5
+                st.rerun()
+                
+
+
+    elif st.session_state.step == 5:
+        # your results code remains unchanged — except map tab updated below
         st.title("Solar Energy Calculator")
         st.success("Calculation Complete")
 
@@ -362,20 +450,34 @@ def render():
 
             st.subheader("Monthly Solar Irradiance")
             st.plotly_chart(fig, use_container_width=True)
-
+        
+        # Inside tab3:
         with tab3:
-          st.subheader("System Location")
-      
-          personal_info = st.session_state.get("personal_info", {})
-          lat = personal_info.get("latitude")
-          lon = personal_info.get("longitude")
-      
-          if lat and lon:
-              st.map(pd.DataFrame({"lat": [lat], "lon": [lon]}))
-          else:
-              st.info("Coordinates not available. Please provide them in Step 3.")
+            st.subheader("System Location")
 
+            # Try location_info first
+            location_info = st.session_state.get("location_info", {})
 
+            # Use session state pin as fallback
+            lat = location_info.get("latitude", st.session_state.get("pin_lat"))
+            lon = location_info.get("longitude", st.session_state.get("pin_lon"))
+            address = location_info.get("address", st.session_state.get("address", ""))
+
+            if lat and lon:
+                st.write(f"📍 **Coordinates:** `{lat}`, `{lon}`")
+                if address:
+                    st.write(f"🏠 **Address:** {address}")
+
+                m = folium.Map(
+                    location=[lat, lon],
+                    zoom_start=15,
+                    tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+                    attr="Esri Satellite"
+                )
+                folium.Marker([lat, lon], popup="System Location").add_to(m)
+                st_folium(m, width=700, height=500)
+            else:
+                st.info("📌 Location not set. Please return to Step 4.")
 
 
 
