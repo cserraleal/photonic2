@@ -14,6 +14,7 @@ from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderUnavailable
 
 from logic.utils.pdf_report import PDFReport
+from io import BytesIO
 from logic.energy.consumption_calculator import ConsumptionCalculator
 from logic.energy.system_calculator import SystemCalculator
 from logic.financial.metrics_calculator import FinancialMetricsCalculator
@@ -205,57 +206,72 @@ def render():
 
 
     elif st.session_state.step == 5:
-        # your results code remains unchanged — except map tab updated below
         st.title("Solar Energy Calculator")
         st.success("Calculation Complete")
-
+    
         # Load session values
         kwh_list = st.session_state.kwh
         distributor = st.session_state.distributor
         rate_type = st.session_state.tariff
         dept = st.session_state.department
         pref = st.session_state.sizing_pref
-
+    
         # --- Energy Calculations ---
         avg_kwh = ConsumptionCalculator.calculate_average_monthly_consumption(kwh_list)
         annual_kwh = ConsumptionCalculator.calculate_annual_consumption(avg_kwh)
         monthly_kwh_sim = DataGenerator.simulate_monthly_distribution(annual_kwh)
         monthly_irradiance = irradiance_monthly[dept]
         annual_irradiance = sum(monthly_irradiance) / 12
-
+    
         system_kw = SystemCalculator.calculate_required_system_size_kw(avg_kwh, annual_irradiance)
         if pref.lower() == "minimum":
             system_kw *= 0.8
         elif pref.lower() == "maximum":
             system_kw *= 1.2
-
+    
         panels = SystemCalculator.calculate_number_of_panels(system_kw)
         installed_kw = SystemCalculator.calculate_installed_power_kw(panels)
         area = SystemCalculator.calculate_required_area_m2(panels)
         annual_gen = SystemCalculator.calculate_annual_generation_kwh(panels, annual_irradiance)
         coverage = SystemCalculator.calculate_coverage_percentage(annual_gen, avg_kwh, pref)
         monthly_generation = DataGenerator.simulate_monthly_generation_from_irradiance(panels, monthly_irradiance)
-
-        # --- Financial ---
-        financial = BillingCalculator.generate_annual_cost_comparison(
-            monthly_kwh_sim, monthly_generation, distributor, rate_type, dept
-        )
-
-        investment = FinancialMetricsCalculator.calculate_investment_cost(installed_kw)
-        payback = FinancialMetricsCalculator.calculate_payback_period(investment, financial["annual_savings"])
-        roi = FinancialMetricsCalculator.calculate_roi(investment, financial["annual_savings"])
-        irr = FinancialMetricsCalculator.calculate_irr(
-            FinancialMetricsCalculator.calculate_cashflow_list(investment, financial["annual_savings"])
-        )
-        co2 = FinancialMetricsCalculator.calculate_co2_saved(annual_gen)
-        trees = FinancialMetricsCalculator.calculate_tree_equivalents(co2)
-
-        # --- Output UI ---
-        # Personal Info Header Section
+    
+        # --- Store Results Once ---
+        if "results" not in st.session_state:
+            financial = BillingCalculator.generate_annual_cost_comparison(
+                monthly_kwh_sim, monthly_generation, distributor, rate_type, dept
+            )
+            investment = FinancialMetricsCalculator.calculate_investment_cost(installed_kw)
+            payback = FinancialMetricsCalculator.calculate_payback_period(investment, financial["annual_savings"])
+            roi = FinancialMetricsCalculator.calculate_roi(investment, financial["annual_savings"])
+            irr = FinancialMetricsCalculator.calculate_irr(
+                FinancialMetricsCalculator.calculate_cashflow_list(investment, financial["annual_savings"])
+            )
+            co2 = FinancialMetricsCalculator.calculate_co2_saved(annual_gen)
+            trees = FinancialMetricsCalculator.calculate_tree_equivalents(co2)
+    
+            st.session_state.results = {
+                "financial": financial,
+                "investment": investment,
+                "payback": payback,
+                "roi": roi,
+                "irr": irr,
+                "co2": co2,
+                "trees": trees
+            }
+    
+        # Retrieve stored values
+        financial = st.session_state.results["financial"]
+        investment = st.session_state.results["investment"]
+        payback = st.session_state.results["payback"]
+        roi = st.session_state.results["roi"]
+        irr = st.session_state.results["irr"]
+        co2 = st.session_state.results["co2"]
+        trees = st.session_state.results["trees"]
+    
         personal_info = st.session_state.get("personal_info", {})
-
+    
         st.markdown("### 🔎 User Summary")
-
         st.markdown(
             f"""
             <div style="border:1px solid #DDD;padding:1rem;border-radius:6px;margin-bottom:1rem;">
@@ -281,8 +297,8 @@ def render():
             st.write(f"• Required Area (m²): **{area}**")
             st.write(f"• Annual Generation (kWh): **{annual_gen}**")
             st.write(f"• Coverage (%): **{coverage}%**")
-
             st.divider()
+            
             st.subheader("Financial & Environmental Results")
             st.write(f"• Investment Cost (Q): **Q{investment}**")
             st.write(f"• Annual Savings (Q): **Q{financial['annual_savings']}**")
@@ -291,70 +307,64 @@ def render():
             st.write(f"• IRR (%): **{irr}**")
             st.write(f"• CO2 Saved (kg/year): **{co2}**")
             st.write(f"• Tree Equivalents: **{trees}**")
+            st.divider()
             # --- Download PDF Report ---
             if st.button("📄 PDF Report"):
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-                    pdf = PDFReport()
-                    pdf.add_cover_page()
-                    pdf.add_page()
-                    
-
-                    # Add user info
-                    pdf.add_user_info(st.session_state.personal_info)
-
-                    # Structure results into labeled dictionaries
-                    energy_output = {
-                        "Average Monthly Consumption (kWh)": avg_kwh,
-                        "Annual Consumption (kWh)": annual_kwh,
-                        "System Size (kW)": round(system_kw, 2),
-                        "Number of Panels": panels,
-                        "Required Area (m²)": area,
-                        "Annual Generation (kWh)": annual_gen,
-                        "Coverage (%)": coverage
-                    }
-
-                    financial_output = {
-                        "Investment Cost (Q)": investment,
-                        "Annual Savings (Q)": financial["annual_savings"],
-                        "Payback Period (years)": payback,
-                        "ROI (%)": roi,
-                        "IRR (%)": irr,
-                        "CO2 Saved (kg/year)": co2,
-                        "Tree Equivalents": trees,
-                        "Annual Cost Without Solar (Q)": financial["annual_cost_without_solar"],
-                        "Annual Cost With Solar (Q)": financial["annual_cost_with_solar"]
-                    }
-
-                    # Add results to PDF
-                    pdf.add_results(energy_output, financial_output)
+                pdf = PDFReport()
+                pdf.add_cover_page()
+                pdf.add_page()
+                pdf.add_user_info(st.session_state.personal_info)
             
-                    # Save PDF
-                    pdf.save_pdf(tmp_file.name)
+                energy_output = {
+                    "Average Monthly Consumption (kWh)": avg_kwh,
+                    "Annual Consumption (kWh)": annual_kwh,
+                    "System Size (kW)": round(system_kw, 2),
+                    "Number of Panels": panels,
+                    "Required Area (m²)": area,
+                    "Annual Generation (kWh)": annual_gen,
+                    "Coverage (%)": coverage
+                }
             
-                    # Show download button
-                    with open(tmp_file.name, "rb") as file:
-                        st.download_button(
-                            label="📥 Click to Download PDF",
-                            data=file,
-                            file_name="solar_report.pdf",
-                            mime="application/pdf"
-                        )
+                financial_output = {
+                    "Investment Cost (Q)": investment,
+                    "Annual Savings (Q)": financial["annual_savings"],
+                    "Payback Period (years)": payback,
+                    "ROI (%)": roi,
+                    "IRR (%)": irr,
+                    "CO2 Saved (kg/year)": co2,
+                    "Tree Equivalents": trees,
+                    "Annual Cost Without Solar (Q)": financial["annual_cost_without_solar"],
+                    "Annual Cost With Solar (Q)": financial["annual_cost_with_solar"]
+                }
+            
+                pdf.add_results(energy_output, financial_output)
+            
+                buffer = pdf.save_to_buffer()
+            
+                st.download_button(
+                    label="📥 Click to Download PDF",
+                    data=buffer,
+                    file_name="solar_report.pdf",
+                    mime="application/pdf"
+                )
+
 
 
         with tab2:
         
             st.info("Graphs will be added in the next step.")
             
-            # Generation vs. Consumption
-            months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                       "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-            
+            months_order = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
             chart_data = pd.DataFrame({
-              "Month": months,
-              "Consumption (kWh)": monthly_kwh_sim,
-              "Generation (kWh)": monthly_generation
+                "Month": months_order,
+                "Consumption (kWh)": monthly_kwh_sim,
+                "Generation (kWh)": monthly_generation
             })
 
+            # Enforce correct month order as a categorical index
+            chart_data["Month"] = pd.Categorical(chart_data["Month"], categories=months_order, ordered=True)
             chart_data.set_index("Month", inplace=True)
 
             st.bar_chart(chart_data, stack=False, color=["#0B284C", "#FFBF41"])
@@ -370,7 +380,6 @@ def render():
 
             # st.subheader("Cumulative Cash Flow Over Time")
             # st.bar_chart(cashflow_df)
-            import plotly.graph_objects as go
 
             # Changing color
             cashflow = FinancialMetricsCalculator.calculate_cashflow_list(investment, financial["annual_savings"])
