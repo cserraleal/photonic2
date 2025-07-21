@@ -65,6 +65,14 @@ class PDFReport(FPDF):
             self.cell(0, 8, f"{value}", ln=True)
             self.set_font("Helvetica", "", 10)
         self.ln(5)
+    
+    def add_image(self, image_path, title=""):
+        if os.path.exists(image_path):
+            if title:
+                self.set_font("Helvetica", "B", 12)
+                self.cell(0, 10, title, ln=True)
+            self.image(image_path, w=180)
+            self.ln(10)
 
     def save_to_buffer(self):
         buffer = BytesIO()

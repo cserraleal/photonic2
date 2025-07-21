@@ -337,7 +337,7 @@ def render():
                     "Annual Cost With Solar (Q)": financial["annual_cost_with_solar"]
                 }
             
-                pdf.add_results(energy_output, financial_output)
+                pdf.add_results(energy_output, financial_output)                
             
                 buffer = pdf.save_to_buffer()
             
@@ -354,20 +354,40 @@ def render():
         
             st.info("Graphs will be added in the next step.")
             
+            # Month ordering
             months_order = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+                            "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
+            # Create DataFrame
             chart_data = pd.DataFrame({
                 "Month": months_order,
                 "Consumption (kWh)": monthly_kwh_sim,
                 "Generation (kWh)": monthly_generation
             })
 
-            # Enforce correct month order as a categorical index
+            # Sort Month column to enforce correct order
             chart_data["Month"] = pd.Categorical(chart_data["Month"], categories=months_order, ordered=True)
-            chart_data.set_index("Month", inplace=True)
+            chart_data.sort_values("Month", inplace=True)
 
-            st.bar_chart(chart_data, stack=False, color=["#0B284C", "#FFBF41"])
+            # Create the bar chart
+            fig = go.Figure(data=[
+                go.Bar(name="Consumption (kWh)", x=chart_data["Month"], y=chart_data["Consumption (kWh)"], marker_color="#0B284C"),
+                go.Bar(name="Generation (kWh)", x=chart_data["Month"], y=chart_data["Generation (kWh)"], marker_color="#FFBF41")
+            ])
+
+            # Customize layout
+            fig.update_layout(
+                barmode="group",
+                title="Monthly Energy Consumption vs Generation",
+                xaxis_title="Month",
+                yaxis_title="Energy (kWh)",
+                height=400,
+                margin=dict(t=50, b=40),
+                legend=dict(x=0.01, y=0.99)
+            )
+
+            # Show in Streamlit
+            st.plotly_chart(fig, use_container_width=True)
             
             # Cumulative cash flow data
             # Using simple st
@@ -440,9 +460,9 @@ def render():
                 legend=dict(x=0.01, y=0.99)
             )
 
-            st.subheader("Annual Solar Generation vs Consumption")
             st.plotly_chart(fig, use_container_width=True)
             
+                                
             # Monthly irradiance chart for the selected department
             months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                       "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
@@ -459,7 +479,6 @@ def render():
                 showlegend=False
             )
 
-            st.subheader("Monthly Solar Irradiance")
             st.plotly_chart(fig, use_container_width=True)
         
         # Inside tab3:
