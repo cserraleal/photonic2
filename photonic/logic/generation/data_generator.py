@@ -1,7 +1,7 @@
 # logic/generation/data_generator.py
 
 import random
-from config.constants import (
+from photonic.config.constants import (
     PANEL_POWER_KW,
     SYSTEM_EFFICIENCY,
     SYSTEM_LIFETIME_YEARS

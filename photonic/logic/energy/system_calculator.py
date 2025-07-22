@@ -1,7 +1,7 @@
 # logic/energy/system_calculator.py
 
 from math import ceil
-from config.constants import *
+from photonic.config.constants import *
 
 class SystemCalculator:
     """

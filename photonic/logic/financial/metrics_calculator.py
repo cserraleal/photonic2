@@ -1,6 +1,6 @@
 # logic/financial/metrics_calculator.py
 
-from config.constants import *
+from photonic.config.constants import *
 
 class FinancialMetricsCalculator:
     """

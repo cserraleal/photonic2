@@ -1,7 +1,7 @@
 # logic/utils/billing_calculator.py
 
-from config.constants import TAX_RATE
-from logic.utils.data_loader import get_full_pricing_data
+from photonic.config.constants import TAX_RATE
+from photonic.logic.utils.data_loader import get_full_pricing_data
 
 class BillingCalculator:
     """

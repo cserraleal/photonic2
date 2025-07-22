@@ -13,14 +13,14 @@ import folium
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderUnavailable
 
-from logic.utils.pdf_report import PDFReport
+from photonic.logic.utils.pdf_report import PDFReport
 from io import BytesIO
-from logic.energy.consumption_calculator import ConsumptionCalculator
-from logic.energy.system_calculator import SystemCalculator
-from logic.financial.metrics_calculator import FinancialMetricsCalculator
-from logic.generation.data_generator import DataGenerator
-from logic.utils.data_loader import get_monthly_irradiance, get_price_per_kwh
-from logic.utils.billing_calculator import BillingCalculator
+from photonic.logic.energy.consumption_calculator import ConsumptionCalculator
+from photonic.logic.energy.system_calculator import SystemCalculator
+from photonic.logic.financial.metrics_calculator import FinancialMetricsCalculator
+from photonic.logic.generation.data_generator import DataGenerator
+from photonic.logic.utils.data_loader import get_monthly_irradiance, get_price_per_kwh
+from photonic.logic.utils.billing_calculator import BillingCalculator
 
 
 @st.cache_data

@@ -22,5 +22,5 @@ if section == "🏠 Home":
 
 # Page: Solar Calculator
 elif section == "🔆 Solar Calculator":
-    from pages import solar_calculator
+    from photonic.pages import solar_calculator
     solar_calculator.render()
