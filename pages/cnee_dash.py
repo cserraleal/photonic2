@@ -11,7 +11,7 @@ def render():
 
     # Mapping of distribuidoras
     DISTRIBUIDORAS = {
-        "EEGSA": 1,
+        "EGGSA": 1,
         "DEOCSA": 2,
         "DEORSA": 3,
         "EMM GUALAN": 4,
@@ -90,10 +90,10 @@ def render():
             df_3["Generación"] = df_3["Generación"].astype(float)
 
             fig3 = go.Figure()
-            fig3.add_trace(go.Bar(x=df_3["hasta"], y=df_3["Generación"], name="Generación", marker_color="#d1ba0f"))
-            fig3.add_trace(go.Bar(x=df_3["hasta"], y=df_3["Distribución"], name="Distribución", marker_color="#9338d9"))
-            fig3.add_trace(go.Bar(x=df_3["hasta"], y=df_3["Transporte"], name="Transporte", marker_color="#73d93d"))
-            fig3.add_trace(go.Bar(x=df_3["hasta"], y=df_3["Pérdidas"], name="Pérdidas", marker_color="#d62728"))
+            fig3.add_trace(go.Bar(x=df_3["hasta"], y=df_3["Generación"], name="Generación", marker_color="#EA5B6F"))
+            fig3.add_trace(go.Bar(x=df_3["hasta"], y=df_3["Distribución"], name="Distribución", marker_color="#FF894F"))
+            fig3.add_trace(go.Bar(x=df_3["hasta"], y=df_3["Transporte"], name="Transporte", marker_color="#FFCB61"))
+            fig3.add_trace(go.Bar(x=df_3["hasta"], y=df_3["Pérdidas"], name="Pérdidas", marker_color="#77BEF0"))
             fig3.update_layout(
                 title="Integración de Costos – Tarifa TS",
                 xaxis_title="Fecha",
