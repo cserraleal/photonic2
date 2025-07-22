@@ -12,17 +12,25 @@ def render():
     # Mapping of distribuidoras
     DISTRIBUIDORAS = {
         "EEGSA": 1,
-        "ENERSA": 2,
-        "DEE": 3,
-        "EMRE": 4,
-        "EMSA": 5,
-        "ENERGIA Y DESARROLLO": 6,
-        "EEG": 7,
-        "EMMEGUA": 8,
-        "EMMGUALAN": 9,
-        "EMSAZACAPA": 10,
-        "EMCOGUA": 11,
-        "EMCOATEPEQUE": 12
+        "DEOCSA": 2,
+        "DEORSA": 3,
+        "EMM GUALAN": 4,
+        "EMM GUASTATOYA": 5,
+        "EMM JALAPA": 6,
+        "EMM SAN PEDRO PINULA": 7,
+        "EMM JOYABAJ": 8,
+        "EMM PATULUL": 9,
+        "EMM RETALHULEU": 10,
+        "EMM SAN MARCOS": 11,
+        "EMM SAN PEDRO SAC": 12,
+        "EMM PTO BARRIOS": 13,
+        "EMM IXCAN": 14,
+        "EMM ZACAPA": 15,
+        "EMM QUETZALTENANGO": 16,
+        "EMM HUEHUETENANGO": 17,
+        "EMM YULXAK STA EULALIA": 18,
+        "EMM TECANA": 19,
+        
     }
 
     # Dropdown
@@ -48,51 +56,52 @@ def render():
     except Exception as e:
         st.error(f"Error al cargar la gráfica 1: {e}")
 
-    # --- Graph 2: Integración de Costos BTS ---
-    try:
-        url_2 = f"https://www.cnee.gob.gt/Calculadora/datos/db.BTS.php?distribuidora={dist_id}"
-        data_2 = requests.get(url_2).json()
-        df_2 = pd.DataFrame(data_2)
-        df_2["Generacion"] = df_2["Generacion"].astype(float)
+    # --- Only show cost integration plots for EEGSA, DEOCSA, DEORSA ---
+    if dist_id <= 3:
+        # --- Graph 2: Integración de Costos BTS ---
+        try:
+            url_2 = f"https://www.cnee.gob.gt/Calculadora/datos/db.BTS.php?distribuidora={dist_id}"
+            data_2 = requests.get(url_2).json()
+            df_2 = pd.DataFrame(data_2)
+            df_2["Generacion"] = df_2["Generacion"].astype(float)
 
-        fig2 = go.Figure()
-        fig2.add_trace(go.Bar(x=df_2["hasta"], y=df_2["Generacion"], name="Generación"))
-        fig2.add_trace(go.Bar(x=df_2["hasta"], y=df_2["Distribucion"], name="Distribución"))
-        fig2.add_trace(go.Bar(x=df_2["hasta"], y=df_2["Transporte"], name="Transporte"))
-        fig2.add_trace(go.Bar(x=df_2["hasta"], y=df_2["Perdidas"], name="Pérdidas"))
-        fig2.update_layout(
-            title="Integración de Costos – Tarifa BTS",
-            xaxis_title="Fecha",
-            yaxis_title="Costo (Q/kWh)",
-            legend_title="Componente",
-            barmode="stack",
-            yaxis=dict(range=[0, 2])
-        )
-        st.plotly_chart(fig2, use_container_width=True)
-    except Exception as e:
-        st.error(f"Error al cargar la gráfica 2: {e}")
+            fig2 = go.Figure()
+            fig2.add_trace(go.Bar(x=df_2["hasta"], y=df_2["Generacion"], name="Generación"))
+            fig2.add_trace(go.Bar(x=df_2["hasta"], y=df_2["Distribucion"], name="Distribución"))
+            fig2.add_trace(go.Bar(x=df_2["hasta"], y=df_2["Transporte"], name="Transporte"))
+            fig2.add_trace(go.Bar(x=df_2["hasta"], y=df_2["Perdidas"], name="Pérdidas"))
+            fig2.update_layout(
+                title="Integración de Costos – Tarifa BTS",
+                xaxis_title="Fecha",
+                yaxis_title="Costo (Q/kWh)",
+                legend_title="Componente",
+                barmode="stack",
+                yaxis=dict(range=[0, 2])
+            )
+            st.plotly_chart(fig2, use_container_width=True)
+        except Exception as e:
+            st.error(f"Error al cargar la gráfica 2: {e}")
 
+        # --- Graph 3: Integración de Costos TS (Stacked Bar) ---
+        try:
+            url_3 = f"https://www.cnee.gob.gt/Calculadora/datos/db.TS.php?distribuidora={dist_id}"
+            data_3 = requests.get(url_3).json()
+            df_3 = pd.DataFrame(data_3)
+            df_3["Generación"] = df_3["Generación"].astype(float)
 
-    # --- Graph 3: Integración de Costos TS (Stacked Bar) ---
-    try:
-        url_3 = f"https://www.cnee.gob.gt/Calculadora/datos/db.TS.php?distribuidora={dist_id}"
-        data_3 = requests.get(url_3).json()
-        df_3 = pd.DataFrame(data_3)
-        df_3["Generación"] = df_3["Generación"].astype(float)
-
-        fig3 = go.Figure()
-        fig3.add_trace(go.Bar(x=df_3["hasta"], y=df_3["Generación"], name="Generación", marker_color="#d1ba0f"))
-        fig3.add_trace(go.Bar(x=df_3["hasta"], y=df_3["Distribución"], name="Distribución", marker_color="#9338d9"))
-        fig3.add_trace(go.Bar(x=df_3["hasta"], y=df_3["Transporte"], name="Transporte", marker_color="#73d93d"))
-        fig3.add_trace(go.Bar(x=df_3["hasta"], y=df_3["Pérdidas"], name="Pérdidas", marker_color="#d62728"))
-        fig3.update_layout(
-            title="Integración de Costos – Tarifa TS",
-            xaxis_title="Fecha",
-            yaxis_title="Costo (Q/kWh)",
-            legend_title="Componente",
-            barmode="stack",
-            yaxis=dict(range=[0, 2])
-        )
-        st.plotly_chart(fig3, use_container_width=True)
-    except Exception as e:
-        st.error(f"Error al cargar la gráfica 3: {e}")
+            fig3 = go.Figure()
+            fig3.add_trace(go.Bar(x=df_3["hasta"], y=df_3["Generación"], name="Generación", marker_color="#d1ba0f"))
+            fig3.add_trace(go.Bar(x=df_3["hasta"], y=df_3["Distribución"], name="Distribución", marker_color="#9338d9"))
+            fig3.add_trace(go.Bar(x=df_3["hasta"], y=df_3["Transporte"], name="Transporte", marker_color="#73d93d"))
+            fig3.add_trace(go.Bar(x=df_3["hasta"], y=df_3["Pérdidas"], name="Pérdidas", marker_color="#d62728"))
+            fig3.update_layout(
+                title="Integración de Costos – Tarifa TS",
+                xaxis_title="Fecha",
+                yaxis_title="Costo (Q/kWh)",
+                legend_title="Componente",
+                barmode="stack",
+                yaxis=dict(range=[0, 2])
+            )
+            st.plotly_chart(fig3, use_container_width=True)
+        except Exception as e:
+            st.error(f"Error al cargar la gráfica 3: {e}")
